@@ -1,0 +1,111 @@
+-- ACL access for Oracle Audit Add-on for Graylog
+-- On calls of DBMS_NETWORK_ACL_ADMIN's UNASSIGN_ACL and UNASSIGN_ACL procedures:
+-- Replace default <Graylog hostname/IP> with hostname/IP address of your Graylog server.
+-- Accept/change default TCP port 41001. Must match Graylog GELF TCP Input port. 
+
+-- =================================================================================================
+
+-- Create Access List graylog_permissions.xml
+
+begin
+DBMS_NETWORK_ACL_ADMIN.CREATE_ACL (
+acl		=> 'graylog_permissions.xml', 
+description	=> 'Graylog Access',
+principal	=> 'AUDORAGRAYLOG', 
+is_grant	=> TRUE,
+privilege	=> 'connect',
+start_date	=> null,
+end_date	=> null
+);
+end;
+/
+
+-- Add connect privilege to User
+
+begin
+DBMS_NETWORK_ACL_ADMIN.ADD_PRIVILEGE(
+acl => 'graylog_permissions.xml',
+principal	=> 'AUDORAGRAYLOG',
+is_grant	=> true,
+privilege	=> 'connect'
+);
+end;
+/
+
+-- Add resolve privilege to User
+
+begin
+DBMS_NETWORK_ACL_ADMIN.ADD_PRIVILEGE(
+acl		=> 'graylog_permissions.xml',
+principal	=> 'AUDORAGRAYLOG',
+is_grant	=> true,
+privilege	=> 'resolve'
+);
+end;
+/
+
+-- Assign Access list
+
+begin
+DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL (
+acl		=> 'graylog_permissions.xml',
+host		=> '<Graylog hostname/IP>', 
+lower_port	=> 41001,
+upper_port	=> 41001
+);
+end;
+/
+
+-- ====================================================
+
+-- Unassign Access list
+
+begin
+DBMS_NETWORK_ACL_ADMIN.UNASSIGN_ACL (
+acl		=> 'graylog_permissions.xml',
+host		=> '<Graylog hostname/IP>', 
+lower_port	=> 41001,
+upper_port	=> 41001
+);
+end;
+/
+
+-- Delete connect Privilege from User
+
+begin
+DBMS_NETWORK_ACL_ADMIN.DELETE_PRIVILEGE (
+acl		=> 'graylog_permissions.xml',
+principal	=> 'AUDORAGRAYLOG',
+is_grant	=> true,
+privilege	=> 'connect'
+);
+end;
+/
+
+-- Delete resolve Privilege from User
+
+begin
+DBMS_NETWORK_ACL_ADMIN.DELETE_PRIVILEGE (
+acl		=> 'graylog_permissions.xml',
+principal	=> 'AUDORAGRAYLOG',
+is_grant	=> true,
+privilege	=> 'resolve'
+);
+end;
+/
+
+-- Drop Access List
+
+begin
+DBMS_NETWORK_ACL_ADMIN.DROP_ACL (
+acl		=> 'graylog_permissions.xml'
+);
+end;
+/
+
+-- ====================================================
+
+SELECT * FROM dba_network_acls;
+
+SELECT * FROM dba_network_acl_privileges
+where principal = 'AUDORAGRAYLOG';
