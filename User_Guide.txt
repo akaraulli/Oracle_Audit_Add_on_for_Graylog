@@ -1,0 +1,380 @@
+Oracle Audit Add-on for Graylog
+by DATAPLUS
+www.dataplus-al.com
+
+
+1. OVERVIEW
+
+Oracle Audit Add-on for Graylog integrates Oracle unified audit with Graylog system.
+
+1.1 Architecture
+
+| Oracle Database -> Oracle Audit Add-on for Graylog | -> | Graylog GELF TCP Input -> Graylog |
+
+Oracle Audit Add-on for Graylog is an Oracle software package that performs delivery of Oracle 
+unified audit events to Graylog SIEM system. The delivery is performed via TCP protocol. An Oracle
+scheduler job invokes periodically the procedure that collects the latest events and delivers them 
+in JSON format for Graylog GELF. On Graylog side a GELF TCP Input receives and ingests the Oracle 
+unified audit events to Graylog repository.
+
+
+1.2 Compatibility
+
+Oracle database support:
+
+Oracle versions 12c, 18c, 19c and 21c
+
+Graylog support:
+
+Graylog versions 2, 3 and 4
+
+
+2. SETUP
+
+2.1 Install Requirements
+
+Permissions:
+
+SYS/SYSDBA permissions are required for the install.
+
+Optional Index:
+
+Depending on the volume and purge policies of Oracle unified audit, an index may be required on the 
+Oracle table AUD$UNIFIED that stores records presented by Oracle system view UNIFIED_AUDIT_TRAIL. 
+To create the index, set the <tablespace_name> according to your environment, and execute the 
+following SQL command:
+
+------------------------------------------------------------------------------------------------------
+create index EVENT_TIMESTAMP_IDX on AUDSYS.AUD$UNIFIED (event_timestamp) tablespace <tablespace_name>;
+------------------------------------------------------------------------------------------------------
+
+
+2.2 Install
+
+Log on as SYS/SYSDBA. 
+On the SQL> terminal run the install script Ora_Aud_GrayLog_[v]_[r]_[m]_Install.sql (1).
+After install check the generated log file Ora_Aud_GrayLog_[v]_[r]_[m]_Install.log.
+
+(1) [v]_[r]_[m] stands for [version]_[release]_[maintenance/patch]
+
+Install will create an Oracle user AUDORAGRAYLOG, with the following objects:
+
+LMS_PARAM		Table of operations parameters
+LMS_SRV			Table of Graylog server settings
+ORACLE_GRAYLOG		Main software package. Procedure LMS_GRAYLOG inside performs the delivery
+LMS_GRAYLOG		Scheduler job that invokes the LMS_GRAYLOG procedure
+
+Confirm the (VALID) status of Add-on objects on system view DBA_OBJECTS!
+
+
+2.3 Graylog Server Settings
+
+Graylog server settings are persisted on a single record of table LMS_SRV. 
+
+Table fields are:
+
+LMS_ID		Id of Graylog server. The single record has a value of 1  	
+DB_NAME		Database common short name. Oracle system context DB_NAME when unset (1) 
+DB_FULL_NAME	Database common full name. Oracle system context DB_UNIQUE_NAME when unset 
+LMS_HOST	Graylog server hostname or IP address
+LMS_PORT	Graylog server port (2) 
+LMS_HOST_2	Graylog second server - reserved for future use
+LMS_PORT_2	Graylog second server port - reserved for future use
+LMS_CHARSET	Character set for delivery, default AL32UTF8 
+TIMESTAMP_LST	Persisted last value of the "Rising Column" EVENT_TIMESTAMP
+MAX_ROWS	Maximum number of rows delivered. Default 10000 
+
+(1) Asterisk (*) indicates an unset value
+(2) Must match the port of Graylog GELF TCP Input running on Graylog machine
+
+As a minimum you must set the Graylog server hostname/IP and port. Replace <Graylog hostname/IP> 
+with the hostname or IP address of your Graylog server, accept/change the port of GELF TCP Input,
+and execute the following SQL command:
+
+----------------------------------
+update AUDORAGRAYLOG.LMS_SRV set
+lms_host = '<Graylog hostname/IP>',
+lms_port = <port>
+where lms_id = 1;
+----------------------------------
+
+For example:
+
+----------------------------------
+update AUDORAGRAYLOG.LMS_SRV set
+lms_host = 'mygrayloghostname',
+lms_port = 41001
+where lms_id = 1;
+----------------------------------
+
+Note:
+To ensure multi-DB support on Graylog side keep the DB_NAME unique in your Oracle environment. It 
+is recommended that DB_FULL_NAME is also kept unique. If your Oracle environment does not offer 
+this (same DB name in more than one database), then avoid duplication by setting them manually.
+
+To set DB naming fields, execute the following SQL command:
+
+-----------------------------------
+update AUDORAGRAYLOG.LMS_SRV set
+db_name	= 'myoracledb',
+db_full_name = 'My Oracle Database'
+where lms_id = 1;
+-----------------------------------
+
+
+2.4 Oracle Network Access Lists (ACL)
+
+ACL access is mandatory since Oracle 11 for every user other then SYS. Without this necessary 
+access, the following error will occur:
+
+ORA-24247: network access denied by access control list (ACL)
+
+The commands for creating, revoking and viewing network ACL access are provided in file ACL.txt.
+Create the required access toward the Graylog server machine before starting.
+
+
+2.5 Oracle Application Schemas 
+
+The dataset of audit events delivered to Oracle contains extra fields other than those of the 
+unified audit trail system view - refer to topic No 3.!
+
+To highlight any event related to objects of your Oracle applications (SEO_APP=1) the application
+schema owner[s] must be declared in this Add-on. This single value, or entries list, is persisted 
+on table LMS_PARAM, VALUE field of the parameter coded APPSCHM and named "Application Schemas". 
+When not in use (default on deploy) the diesis (#) character is set.
+
+To declare your application schema[s], execute the following SQL command:
+
+------------------------------------------
+update AUDORAGRAYLOG.LMS_PARAM set
+param_value = '<Oracle applications list>'
+where parameter_id = 1;
+------------------------------------------
+
+For example, for a single application user schema named MYAPP, execute the following SQL command:
+
+----------------------------------
+update AUDORAGRAYLOG.LMS_PARAM set
+param_value = 'MYAPP'
+where parameter_id = 1;
+----------------------------------
+
+For multiple application schemas, the diesis (#) character must be used as a separator. For example,
+in case of three schemas named MYAPP1, MYAPP2 and MYAPP1, execute the following SQL command:
+
+------------------------------------
+update AUDORAGRAYLOG.LMS_PARAM set
+param_value = 'MYAPP1#MYAPP2#MYAPP3'
+where parameter_id = 1;
+------------------------------------
+
+
+2.6 Start audit events delivery
+
+Oracle Scheduler job LMS_GRAYLOG performs periodical delivery of Oracle unified audit events to Graylog. 
+By default the Scheduler job is not enabled on install. 
+
+After completing the previous steps above, start the delivery of audit events by enabling the Scheduler Job.
+Refer to topic 4.3 Scheduler job control!
+
+Note:
+Default run interval of this job is 60 seconds.
+
+Monitor job activity in Oracle system view DBA_SCHEDULER_JOB_RUN_DETAILS!
+
+
+2.7 Uninstall
+
+Log on as SYS/SYSDBA. 
+On the SQL> terminal run the uninstall script Ora_Aud_GrayLog_[v]_[r]_[m]_Uninstall.sql (1).
+After install check the generated log file Ora_Aud_GrayLog_[v]_[r]_[m]_Uninstall.log.
+
+(1) [v]_[r]_[m] stands for [version]_[release]_[maintenance/patch]
+
+
+3. Audit Events Dataset for Graylog
+
+3.1 Field Types
+
+* DB common naming fields and DB hostname (1)
+* Oracle system view UNIFIED_AUDIT_TRAIL fields (2)
+* Search Extra Options (SEO) fields
+
+(1) Oracle system context SERVER_HOST
+(2) Fields OBJECT_TYPE and DP_WARNINGS1, introduced in Oracle 21c, are commented in the LMS_GRAYLOG
+procedure to avoid error in Oracle versions 12c, 18c and 19c. To use these fields in Oracle 21c, 
+uncomment their declarations on both cursor fields and Graylog JSON record construction.
+
+
+3.2 Search Extra Options (SEO) fields
+
+Logical 0/1 (false/true) fields define extra categorization of unified audit events.
+
+SEO_SEC		Security events
+SEO_ACC		Logon access events
+SEO_ORA		Oracle (SYS-owned) objects events
+SEO_DDL		Data definition events
+SEO_DML		Data manipulation events
+SEO_SE		Select, Execute and Read events
+SEO_ERR		Error events
+SEO_APP		Application schemas events
+SEO_CURR_USER	Top-SQL execution event
+
+These fields are transformed from combinations of unified audit event field values for each record
+and are used to simplify searching, reporting and alerting on the Graylog system.
+
+
+4. OPERATIONS
+
+4.1 Normal Operations
+
+The scheduler job LMS_GRAYLOG will invoke the ORACLE_GRAYLOG.LMS_GRAYLOG procedure. This procedure 
+will query the latest events of system view UNIFIED_AUDIT_TRAIL . "Latest" is defined as records 
+having an EVENT_TIMESTAMP value greater then what is persisted on the prior run in TIMESTAMP_LST 
+column of single-record table LMS_SRV. These events will be delivered to Graylog, persisting the 
+greatest EVENT_TIMESTAMP value of the processed events that will serve as a starting point for the 
+next procedure run.
+
+Key columns in the process are:
+
+EVENT_TIMESTAMP		rising column for events
+EVENT_TIMESTAMP_UTC	timestamp column for Graylog events
+
+In the delivered GELF JSON package the timestamp column is formatted as an Unix epoch time with 
+fractional seconds. 
+
+On the first run, the empty (on install) value of table LMS_SRV column TIMESTAMP_LST will be set 
+with the current timestamp of the database system. To start collection of audit events from a time
+prior to current, set this value manually in the LMS_SRV table.
+
+
+4.2 Diagnostics and Debug
+
+Diagnostics:
+
+select * from dba_objects t
+where t.owner = 'AUDORAGRAYLOG'
+
+select * from dba_scheduler_jobs t
+where t.owner = 'AUDORAGRAYLOG'
+and t.job_name = 'LMS_GRAYLOG'
+
+select * from dba_scheduler_job_run_details t
+where t.owner = 'AUDORAGRAYLOG'
+and t.job_name = 'LMS_GRAYLOG'
+order by t.log_id
+
+select * from unified_audit_trail t
+where t.event_timestamp > systimestamp -1
+order by t.event_timestamp 
+
+select 
+lms_host, lms_port, lms_charset, timestamp_lst, max_rows
+from AUDORAGRAYLOG.LMS_SRV
+
+
+Debug:
+
+Use the Oracle's DBMS_OUTPUT to debug operations of the Add-on, ex. the event's GELF JSON pack 
+delivered to Graylog. Dbms_Output is commented in code on a single instance as an illustration;
+user can add others at will. 
+
+Debug info is found on Oracle view DBA_SCHEDULER_JOB_RUN_DETAILS, fields OUTPUT and BINARY_OUTPUT. 
+
+Eventual error info is be found on Oracle view dba_scheduler_job_run_details, fields 
+ADDITIONAL_INFO, ERRORS, BINARY_ERRORS.
+
+
+4.3 Scheduler job control
+
+To enable the job run:
+
+begin
+ dbms_scheduler.enable(
+ 'AUDORAGRAYLOG.LMS_GRAYLOG'
+ );  
+end;
+/
+
+To disable the job run:
+
+begin
+ dbms_scheduler.disable(
+ 'AUDORAGRAYLOG.LMS_GRAYLOG',
+ TRUE
+ );  
+end;
+/
+
+
+5. Graylog minimal requirements
+
+5.1 GELF TCP Input
+
+Minimal requirement on the Graylog system is a running GELF TCP Input. The port of this input must 
+match the one declared in field LMS_PORT of table LMS_SRV
+
+
+5.2 Application search
+
+The GELF JSON package contains a special field, application_name, which is set as "oraaudgraylog".
+To identify this Add-on events from events of other systems/application in Graylog, start your
+searches with:
+
+application_name:oraaudgraylog
+
+
+7. Oracle Unified Audit references
+
+7.1 Unified Audit Items
+
+Unified audit system views:
+
+AUDIT_UNIFIED_POLICIES		available unified audit policies
+https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/AUDIT_UNIFIED_POLICIES.html
+
+AUDIT_UNIFIED_ENABLED_POLICIES	enabled unified audit policies
+https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/AUDIT_UNIFIED_ENABLED_POLICIES.html
+
+UNIFIED_AUDIT_TRAIL		unified audit events trail
+https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/UNIFIED_AUDIT_TRAIL.html
+
+
+Unified audit commands:
+
+CREATE AUDIT POLICY		creates a unified audit policy
+https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-AUDIT-POLICY-Unified-Auditing.html
+
+AUDIT (Unified)			audits a unified audit policy for users
+https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/AUDIT-Unified-Auditing.html
+
+
+7.1 Unified Audit quick start
+
+Oracle database deploys a predefined set of unified audit policies:
+
+ORA_ACCOUNT_MGMT		commonly used user account and privilege settings
+ORA_CIS_RECOMMENDATIONS		Internet Security (CIS) recommendations
+ORA_DATABASE_PARAMETER		Database parameter settings
+ORA_DV_AUDPOL			Database Vault DVSYS and LBACSYS schema objects
+ORA_DV_AUDPOL2			Database Vault default realms and command rules
+ORA_LOGON_FAILURES		failed logons only
+ORA_RAS_POLICY_MGMT		Real Application Security administrative actions on application 
+				users, roles, and policies
+ORA_RAS_SESSION_MGMT		Real Application Security session actions and namespace actions
+ORA_SECURECONFIG		provides all the secure configuration audit options
+
+
+Reference:
+Oracle Database 19c - Security Guide
+25 Configuring Audit Policies 
+25.3 Auditing Activities with the Predefined Unified Audit Policies 
+https://docs.oracle.com/en/database/oracle/oracle-database/19/dbseg/configuring-audit-policies.html
+
+
+8. DATAPLUS
+
+Oracle database security software solutions and services
+
+Web:	https://www.dataplus-al.com
+e-Mail:	info@dataplus-al.com
