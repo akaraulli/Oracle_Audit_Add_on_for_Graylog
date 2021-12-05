@@ -19,8 +19,9 @@ unified audit events to Graylog repository.
 3. Setup
 
 Oracle
-* Install the Add-on in the Oracle Database
-* Set the Graylog Server hostname/IP and port in table LMS_SRV (fields lms_host and lms_port)
+* Install the Add-on in the Oracle Database by executing SQL script Ora_Aud_GrayLog_01_00_00_Install.sql
+* Set the Graylog Server hostname/IP and port in table LMS_SRV, respectively in fields lms_host and lms_port
+* Grant Network ACL to Add-on schema owner using SQL commands in file ACL.txt 
 * Start the Oracle scheduler job LMS_GRAYLOG
 
 Graylog
