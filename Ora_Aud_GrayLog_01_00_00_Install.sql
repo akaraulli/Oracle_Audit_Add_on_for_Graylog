@@ -164,7 +164,7 @@ create or replace package "AUDORAGRAYLOG"."ORACLE_GRAYLOG" is
 -- Street Address: Bul. Zog I, P. Edicom, 8F.
 -- Web:    www.dataplus-al.com
 -- e-Mail: info@dataplus-al.com
--- Copyright © 2007-2021 by DATAPLUS
+-- Copyright Â© 2007-2021 by DATAPLUS
 --  ------------------------------------------------------------------------------------------
 
 -- ============================================================
@@ -224,7 +224,7 @@ create or replace package body "AUDORAGRAYLOG"."ORACLE_GRAYLOG" is
 -- Street Address: Bul. Zog I, P. Edicom, 8F.
 -- Web:    www.dataplus-al.com
 -- e-Mail: info@dataplus-al.com
--- Copyright © 2007-2021 by DATAPLUS
+-- Copyright Â© 2007-2021 by DATAPLUS
 --  ------------------------------------------------------------------------------------------
   
 -- ============================================================
@@ -1027,6 +1027,6 @@ execute SYS.DBMS_UTILITY.COMPILE_SCHEMA('AUDORAGRAYLOG', TRUE, FALSE);
 
 
 -- Purge Recycle Bin
-purge recyclebin;
+purge recyclebin; 
    
 SPOOL OFF
