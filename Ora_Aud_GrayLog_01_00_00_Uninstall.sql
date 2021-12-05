@@ -50,6 +50,6 @@ drop user AUDORAGRAYLOG cascade;
 
 
 -- Purge Recycle Bin
-purge recyclebin;
+purge recyclebin; 
    
 SPOOL OFF
