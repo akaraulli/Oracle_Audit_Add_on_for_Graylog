@@ -377,4 +377,4 @@ https://docs.oracle.com/en/database/oracle/oracle-database/19/dbseg/configuring-
 Oracle database security software solutions and services
 
 Web:	https://www.dataplus-al.com
-e-Mail:	info@dataplus-al.com
+e-Mail:	info@dataplus-al.com 
