@@ -160,7 +160,7 @@ where parameter_id = 1;
 ----------------------------------
 
 For multiple application schemas, the diesis (#) character must be used as a separator. For example,
-in case of three schemas named MYAPP1, MYAPP2 and MYAPP1, execute the following SQL command:
+in case of three schemas named MYAPP1, MYAPP2 and MYAPP3, execute the following SQL command:
 
 ------------------------------------
 update AUDORAGRAYLOG.LMS_PARAM set
