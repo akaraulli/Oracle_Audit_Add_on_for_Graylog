@@ -164,7 +164,7 @@ create or replace package "AUDORAGRAYLOG"."ORACLE_GRAYLOG" is
 -- Street Address: Bul. Zog I, P. Edicom, 8F.
 -- Web:    www.dataplus-al.com
 -- e-Mail: info@dataplus-al.com
--- Copyright Â© 2007-2021 by DATAPLUS
+-- Copyright © 2007-2021 by DATAPLUS
 --  ------------------------------------------------------------------------------------------
 
 -- ============================================================
@@ -224,7 +224,7 @@ create or replace package body "AUDORAGRAYLOG"."ORACLE_GRAYLOG" is
 -- Street Address: Bul. Zog I, P. Edicom, 8F.
 -- Web:    www.dataplus-al.com
 -- e-Mail: info@dataplus-al.com
--- Copyright Â© 2007-2021 by DATAPLUS
+-- Copyright © 2007-2021 by DATAPLUS
 --  ------------------------------------------------------------------------------------------
   
 -- ============================================================
@@ -755,9 +755,9 @@ v_sql_text  := replace(v_sql_text,chr(0),'');
 v_rls_info  := replace(v_rls_info,chr(0),'');
 
 -- Set Graylog field 32 kB limit
-v_sql_binds := substr(v_sql_binds,1,32768);
-v_sql_text  := substr(v_sql_text,1,32768);
-v_rls_info  := substr(v_rls_info,1,32768);
+v_sql_binds := substr(v_sql_binds,1,32766);
+v_sql_text  := substr(v_sql_text,1,32766);
+v_rls_info  := substr(v_rls_info,1,32766);
 
 -- Graylog JSON record
 v_GL_record := 
@@ -1027,6 +1027,6 @@ execute SYS.DBMS_UTILITY.COMPILE_SCHEMA('AUDORAGRAYLOG', TRUE, FALSE);
 
 
 -- Purge Recycle Bin
-purge recyclebin; 
+purge recyclebin;
    
 SPOOL OFF
